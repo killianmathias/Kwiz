@@ -21,6 +21,7 @@ model Quiz {
   userId    Int
   user      User       @relation(fields: [userId], references: [id])
   questions Question[]
+  games Game[]
 }
 
 model User {
@@ -30,6 +31,7 @@ model User {
   username  String   @unique
   createdAt DateTime @default(now())
   quizzes   Quiz[]
+  gamePlayers GamePlayer[]
 }
 
 model Question {
@@ -39,4 +41,35 @@ model Question {
   question    String
   options     String[] // tableau de réponses possibles
   correctIndex Int     // index de la bonne réponse dans options
+  answers Answer[]
+}
+
+model Game {
+  id        Int          @id @default(autoincrement())
+  quiz      Quiz         @relation(fields: [quizId], references: [id])
+  quizId    Int
+  createdAt DateTime     @default(now())
+  players   GamePlayer[]
+}
+
+model GamePlayer {
+  id        Int      @id @default(autoincrement())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int
+  game      Game     @relation(fields: [gameId], references: [id])
+  gameId    Int
+  score     Int
+  joinedAt  DateTime @default(now())
+  answers   Answer[]
+}
+
+model Answer {
+  id            Int        @id @default(autoincrement())
+  question      Question   @relation(fields: [questionId], references: [id])
+  questionId    Int
+  gamePlayer    GamePlayer @relation(fields: [gamePlayerId], references: [id])
+  gamePlayerId  Int
+  selectedIndex Int
+  isCorrect     Boolean
+  
 }
