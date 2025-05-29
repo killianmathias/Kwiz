@@ -21,3 +21,4 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
     return res.status(401).json({ message: "Token invalide" });
   }
 };
+export type { AuthRequest };

@@ -13,7 +13,6 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
-
 model Quiz {
   id        Int        @id @default(autoincrement())
   title     String
@@ -21,27 +20,27 @@ model Quiz {
   userId    Int
   user      User       @relation(fields: [userId], references: [id])
   questions Question[]
-  games Game[]
+  games     Game[]     // Relation opposée ajoutée
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
+  id        Int          @id @default(autoincrement())
+  email     String       @unique
   password  String
-  username  String   @unique
-  createdAt DateTime @default(now())
+  username  String       @unique
+  createdAt DateTime     @default(now())
   quizzes   Quiz[]
-  gamePlayers GamePlayer[]
+  gamePlayers GamePlayer[] // Relation opposée ajoutée
 }
 
 model Question {
-  id          Int      @id @default(autoincrement())
-  quiz        Quiz     @relation(fields: [quizId], references: [id])
-  quizId      Int
-  question    String
-  options     String[] // tableau de réponses possibles
-  correctIndex Int     // index de la bonne réponse dans options
-  answers Answer[]
+  id           Int        @id @default(autoincrement())
+  quiz         Quiz       @relation(fields: [quizId], references: [id])
+  quizId       Int
+  question     String
+  options      String[]
+  correctIndex Int
+  answers      Answer[]   // Relation opposée ajoutée
 }
 
 model Game {
@@ -53,13 +52,13 @@ model Game {
 }
 
 model GamePlayer {
-  id        Int      @id @default(autoincrement())
-  user      User     @relation(fields: [userId], references: [id])
+  id        Int          @id @default(autoincrement())
+  user      User         @relation(fields: [userId], references: [id])
   userId    Int
-  game      Game     @relation(fields: [gameId], references: [id])
+  game      Game         @relation(fields: [gameId], references: [id])
   gameId    Int
   score     Int
-  joinedAt  DateTime @default(now())
+  joinedAt  DateTime     @default(now())
   answers   Answer[]
 }
 
@@ -71,5 +70,4 @@ model Answer {
   gamePlayerId  Int
   selectedIndex Int
   isCorrect     Boolean
-  
 }

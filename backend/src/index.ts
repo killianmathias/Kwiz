@@ -3,6 +3,7 @@ import cors from "cors";
 import quizRoutes from "./routes/quiz.routes";
 import authRoutes from "./routes/auth.routes";
 import questionRoutes from "./routes/question.routes";
+import gameRoutes from "./routes/game.routes"
 
 
 
@@ -17,6 +18,7 @@ app.use(express.json());
 app.use("/api/quizzes", quizRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/questions", questionRoutes);
+app.use("/api/games",gameRoutes)
 
 app.get("/bonjour", (req, res) => {
   res.send("Hello World 👋");
