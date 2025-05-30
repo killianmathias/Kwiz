@@ -41,14 +41,25 @@ model Question {
   options      String[]
   correctIndex Int
   answers      Answer[]   // Relation opposée ajoutée
+  gamesAsCurrentQuestion Game[] @relation("CurrentQuestion")
+  gameQuestions GameQuestion[]
 }
 
 model Game {
-  id        Int          @id @default(autoincrement())
-  quiz      Quiz         @relation(fields: [quizId], references: [id])
-  quizId    Int
-  createdAt DateTime     @default(now())
-  players   GamePlayer[]
+  id              Int            @id @default(autoincrement())
+  quizId          Int
+  quiz            Quiz           @relation(fields: [quizId], references: [id])
+  players         GamePlayer[]
+  answers         Answer[]
+  createdAt       DateTime       @default(now())
+  startedAt       DateTime?      
+  endedAt         DateTime?      
+  currentTurn     Int            @default(1)
+  turnStartedAt   DateTime?
+  maxQuestions    Int            @default(10)
+  currentQuestionId Int?         @unique
+  currentQuestion Question? @relation("CurrentQuestion", fields: [currentQuestionId], references: [id])
+  gameQuestions GameQuestion[]
 }
 
 model GamePlayer {
@@ -70,4 +81,17 @@ model Answer {
   gamePlayerId  Int
   selectedIndex Int
   isCorrect     Boolean
+  answeredAt    DateTime   @default(now())
+  
+  game          Game       @relation(fields: [gameId], references: [id])
+  gameId        Int
+}
+
+model GameQuestion {
+  id        Int      @id @default(autoincrement())
+  game      Game     @relation(fields: [gameId], references: [id])
+  gameId    Int
+  question  Question @relation(fields: [questionId], references: [id])
+  questionId Int
+  order     Int
 }

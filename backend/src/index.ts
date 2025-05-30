@@ -4,6 +4,9 @@ import quizRoutes from "./routes/quiz.routes";
 import authRoutes from "./routes/auth.routes";
 import questionRoutes from "./routes/question.routes";
 import gameRoutes from "./routes/game.routes"
+import { startTurnTimer } from "./services/timerService";
+
+startTurnTimer();
 
 
 
