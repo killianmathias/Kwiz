@@ -3,6 +3,7 @@ import { prisma } from "../lib/prisma";
 import { JwtPayload } from "jsonwebtoken";
 import { AuthRequest } from "../middlewares/auth.middleware"
 import { advanceToNextTurn } from "../services/gameEngine";
+import { getIO } from "../sockets/socket";
 
 
 
@@ -44,6 +45,7 @@ export const createGame = async (req: AuthRequest, res: Response) => {
     });
 
     res.status(201).json(game);
+    getIO().to(`game-${game.id}`).emit("gameCreated", game);
   } catch (error) {
     console.error("Erreur lors de la création de la partie :", error);
     res.status(500).json({ message: "Erreur interne du serveur" });
@@ -90,10 +92,21 @@ export const joinGame = async (req: AuthRequest, res: Response) => {
       },
     });
 
+    // Récupère l'utilisateur pour envoyer le username via socket
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    getIO().to(`game-${gameId}`).emit("playerJoined", {
+      userId,
+      username: user?.username ?? "Inconnu",
+    });
+
     res.status(201).json({
       message: "Utilisateur ajouté à la partie",
       player: newPlayer,
     });
+    
   } catch (error) {
     console.error("Erreur lors de la tentative de rejoindre la partie :", error);
     res.status(500).json({ message: "Erreur interne du serveur" });
@@ -153,6 +166,11 @@ export const submitAnswer = async (req: AuthRequest, res: Response) => {
         },
       });
     }
+    getIO().to(`game-${gameId}`).emit("answerSubmitted", {
+      userId,
+      selectedIndex,
+      isCorrect,
+    });
 
     res.status(201).json({ message: "Réponse enregistrée", answer });
   } catch (error) {
@@ -193,7 +211,14 @@ export const finishGame = async (req: AuthRequest, res: Response) => {
         username: p.user.username,
         score: p.score,
       }));
-
+    getIO().to(`game-${gameId}`).emit("gameFinished", {
+      winners,
+      leaderboard: updatedGame.players.map(p => ({
+        id: p.user.id,
+        username: p.user.username,
+        score: p.score,
+      })),
+    });
     res.status(200).json({
       message: "Partie terminée",
       game: {
@@ -365,13 +390,18 @@ export const startGame = async (req: Request, res: Response) => {
         turnStartedAt: new Date(),
       },
     });
-
+    getIO().to(`game-${game.id}`).emit("gameStarted", {
+      gameId: game.id,
+      totalQuestions: numberOfQuestions,
+      currentQuestionId: firstQuestionId,
+    });
     return res.status(200).json({
       message: "Partie démarrée",
       gameId: game.id,
       totalQuestions: numberOfQuestions,
       currentQuestionId: firstQuestionId,
     });
+    
   } catch (error) {
     console.error("Erreur lors du démarrage du jeu :", error);
     return res.status(500).json({ error: "Erreur serveur lors du démarrage du jeu" });
@@ -379,25 +409,33 @@ export const startGame = async (req: Request, res: Response) => {
 };
 
 
+
+
 export const nextTurn = async (req: AuthRequest, res: Response) => {
   try {
     const gameId = Number(req.params.id);
-    if (!gameId) return res.status(400).json({ message: "ID invalide" });
+    if (!gameId) return res.status(400).json({ message: "ID de partie invalide" });
 
     const result = await advanceToNextTurn(gameId);
 
-    if (result.finished) {
-      return res.status(200).json({ message: "La partie est terminée" });
+    if (result.status === "ended") {
+      getIO().to(`game-${gameId}`).emit("gameEnded", {
+        message: result.message,
+      });
+      return res.status(200).json({ message: result.message });
     }
-
+    getIO().to(`game-${gameId}`).emit("nextTurn", {
+      currentTurn: result.nextTurn,
+      question: result.question,
+    });
     return res.status(200).json({
-      message: "Tour suivant lancé",
-      currentTurn: result.currentTurn,
-      question: result.question
+      message: result.message,
+      currentTurn: result.nextTurn,
+      question: result.question,
     });
 
   } catch (error) {
-    console.error("Erreur nextTurn :", error);
+    console.error("Erreur dans nextTurn :", error);
     res.status(500).json({ message: "Erreur serveur" });
   }
 };

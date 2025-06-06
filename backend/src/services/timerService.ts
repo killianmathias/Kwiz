@@ -63,9 +63,9 @@ export function startTurnTimer() {
 
 export async function passToNextTurn(gameId: number) {
   const result = await advanceToNextTurn(gameId);
-  if (result.finished) {
-    console.log(`Jeu ${gameId} terminé automatiquement`);
-  } else {
-    console.log(`Tour ${result.currentTurn} lancé automatiquement pour le jeu ${gameId}`);
-  }
+  if (result.status === "ended") {
+  console.log(`Jeu ${gameId} terminé automatiquement`);
+} else {
+  console.log(`Tour ${result.nextTurn} lancé automatiquement pour le jeu ${gameId}`);
+}
 }

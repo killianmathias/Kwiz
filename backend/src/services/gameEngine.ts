@@ -2,32 +2,31 @@
 
 import { prisma } from "../lib/prisma";
 
-export async function advanceToNextTurn(gameId: number): Promise<{
-  finished: boolean,
-  currentTurn?: number,
-  question?: {
-    id: number,
-    question: string,
-    options: string[]
-  }
-}> {
+
+export async function advanceToNextTurn(gameId: number) {
   const game = await prisma.game.findUnique({
     where: { id: gameId },
     include: {
-      gameQuestions: {
-        orderBy: { order: 'asc' },
-        include: { question: true },
+      quiz: {
+        include: { questions: true },
       },
+      gameQuestions: true,
     },
   });
 
-  if (!game || game.endedAt) {
-    return { finished: true };
+  if (!game) {
+    throw new Error(`Jeu ${gameId} introuvable`);
   }
 
-  const currentIndex = game.currentTurn; // 1-based
+  if (game.endedAt) {
+    throw new Error(`La partie ${gameId} est déjà terminée`);
+  }
 
-  if (currentIndex >= game.maxQuestions || currentIndex >= game.gameQuestions.length) {
+  const currentTurn = game.currentTurn || 1;
+  const nextTurn = currentTurn + 1;
+
+  // Fin du jeu si on dépasse le nombre maximum de questions
+  if (currentTurn >= game.maxQuestions) {
     await prisma.game.update({
       where: { id: gameId },
       data: {
@@ -36,28 +35,59 @@ export async function advanceToNextTurn(gameId: number): Promise<{
         turnStartedAt: null,
       },
     });
-
-    return { finished: true };
+    return { status: "ended", message: "La partie est terminée" };
   }
 
-  const nextGameQuestion = game.gameQuestions[currentIndex]; // currentTurn = 1 → index 1
+  // Liste des questions déjà posées
+  const usedQuestionIds = game.gameQuestions.map((gq) => gq.questionId);
+  const remainingQuestions = game.quiz.questions.filter(
+    (q) => !usedQuestionIds.includes(q.id)
+  );
 
-  await prisma.game.update({
-    where: { id: gameId },
-    data: {
-      currentTurn: currentIndex + 1,
-      currentQuestionId: nextGameQuestion.questionId,
-      turnStartedAt: new Date(),
-    },
-  });
+  if (remainingQuestions.length === 0) {
+    // Fin de partie s’il n’y a plus de questions disponibles
+    await prisma.game.update({
+      where: { id: gameId },
+      data: {
+        endedAt: new Date(),
+        currentQuestionId: null,
+        turnStartedAt: null,
+      },
+    });
+    return { status: "ended", message: "Plus de questions disponibles" };
+  }
+
+  // Choisir une question aléatoire parmi celles restantes
+  const nextQuestion =
+    remainingQuestions[Math.floor(Math.random() * remainingQuestions.length)];
+
+  // Effectuer la mise à jour dans une transaction
+  await prisma.$transaction([
+    prisma.game.update({
+      where: { id: gameId },
+      data: {
+        currentTurn: nextTurn,
+        currentQuestionId: nextQuestion.id,
+        turnStartedAt: new Date(),
+      },
+    }),
+    prisma.gameQuestion.create({
+      data: {
+        gameId,
+        questionId: nextQuestion.id,
+        order: nextTurn,
+      },
+    }),
+  ]);
 
   return {
-    finished: false,
-    currentTurn: currentIndex + 1,
+    status: "ok",
+    message: "Tour suivant démarré",
+    nextTurn,
     question: {
-      id: nextGameQuestion.question.id,
-      question: nextGameQuestion.question.question,
-      options: nextGameQuestion.question.options,
-    }
+      id: nextQuestion.id,
+      question: nextQuestion.question,
+      options: nextQuestion.options,
+    },
   };
 }

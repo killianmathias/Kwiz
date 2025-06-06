@@ -27,3 +27,11 @@ export const getMyQuizzes = async (req: Request, res: Response) => {
 
   res.json(quizzes);
 };
+
+export const getAllQuizzes = async (req: Request, res: Response) => {
+  const quizzes = await prisma.quiz.findMany({
+    include: { questions: true },
+  });
+
+  res.json(quizzes);
+};
