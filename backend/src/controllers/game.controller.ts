@@ -11,6 +11,7 @@ export const createGame = async (req: AuthRequest, res: Response) => {
   try {
     const { quizId } = req.body;
 
+
     if (!quizId) {
       return res.status(400).json({ message: "quizId requis" });
     }
@@ -457,9 +458,9 @@ export const getCurrentGameState = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: "Partie introuvable" });
     }
 
-    if (!game.startedAt) {
-      return res.status(400).json({ message: "La partie n'a pas encore commencé" });
-    }
+    // if (!game.startedAt) {
+    //   return res.status(400).json({ message: "La partie n'a pas encore commencé" });
+    // }
 
     if (game.endedAt) {
       return res.status(200).json({ message: "La partie est terminée" });

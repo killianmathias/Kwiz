@@ -35,3 +35,34 @@ export const getAllQuizzes = async (req: Request, res: Response) => {
 
   res.json(quizzes);
 };
+
+export const getQuizById = async (req: Request, res: Response) => {
+  const quizId = parseInt(req.params.id);
+
+  if (isNaN(quizId)) {
+    return res.status(400).json({ message: "ID invalide" });
+  }
+
+  try {
+    const quiz = await prisma.quiz.findUnique({
+      where: { id: quizId },
+      include: {
+        questions: {
+          include: {
+            // si besoin, tu peux inclure les réponses ici
+            // answers: true
+          }
+        }
+      },
+    });
+
+    if (!quiz) {
+      return res.status(404).json({ message: "Quiz non trouvé" });
+    }
+
+    res.json(quiz);
+  } catch (error) {
+    console.error("Erreur lors de la récupération du quiz :", error);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+};
