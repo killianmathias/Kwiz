@@ -1,13 +1,14 @@
+import QuizList from '@/components/cards/quizList';
 import Header from '@/components/Header';
-import { SafeAreaView, ScrollView, StyleSheet } from 'react-native';
+import { Dimensions, SafeAreaView, StyleSheet } from 'react-native';
 
+const { width, height } = Dimensions.get('window');
 
 export default function HomeScreen() {
   return (
-    <SafeAreaView>
-      <ScrollView>
+    <SafeAreaView style={styles.pageContainer}>
         <Header/>
-      </ScrollView>
+        <QuizList/>
     </SafeAreaView>
   );
 }
@@ -29,4 +30,8 @@ const styles = StyleSheet.create({
     left: 0,
     position: 'absolute',
   },
+  pageContainer:{
+    width : width,
+    height : height,
+  }
 });

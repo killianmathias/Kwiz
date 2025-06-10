@@ -4,7 +4,6 @@ import axios from 'axios';
 import React, { useState } from 'react';
 import { Alert, Button, StyleSheet, Text, TextInput, View } from 'react-native';
 
-console.log(API_BASE_URL);
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
