@@ -2,35 +2,25 @@ import express from "express";
 import http from "http";
 import { Server as SocketIOServer } from "socket.io";
 import cors from "cors";
-import quizRoutes from "./routes/quiz.routes";
-import authRoutes from "./routes/auth.routes";
-import questionRoutes from "./routes/question.routes";
-import gameRoutes from "./routes/game.routes";
-import { startTurnTimer } from "./services/timerService";
-import { initSocket } from "./sockets/socket";
+import { authRouter } from "./routes/auth.routes";
+import { quizRouter } from "./routes/quiz.routes";
+import { questionRouter } from "./routes/question.routes";
+import { gameRouter } from "./routes/game.routes";
+import { initSocket } from "./socket";
 
 const app = express();
-const server = http.createServer(app); // 🔧 créer un serveur HTTP autour d'express
-const io = new SocketIOServer(server, {
-  cors: {
-    origin: "*", // sécuriser ça plus tard
-    methods: ["GET", "POST"],
-  },
-});
+const server = http.createServer(app);
+initSocket(server);
 
-startTurnTimer();
-initSocket(io); // 🔌 brancher la logique socket
-
-const PORT = 3000;
+const PORT = 3001;
 
 app.use(cors());
 app.use(express.json());
 
-// Routes
-app.use("/api/quizzes", quizRoutes);
-app.use("/api/auth", authRoutes);
-app.use("/api/questions", questionRoutes);
-app.use("/api/games", gameRoutes);
+app.use("/auth", authRouter);
+app.use("/quiz", quizRouter);
+app.use("/question", questionRouter);
+app.use("/game", gameRouter);
 
 app.get("/bonjour", (_req, res) => {
   res.send("Hello World 👋");

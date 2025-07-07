@@ -1,14 +1,15 @@
-import { Router } from "express";
-import { createQuiz, getAllQuizzes, getMyQuizzes, getQuizById } from "../controllers/quiz.controller";
-import { authenticate } from "../middlewares/auth.middleware";
+import { Express, Router } from "express";
+import { authMiddleware } from "../middlewares/auth.middleware";
+import {
+  createQuiz,
+  getAllQuiz,
+  getQuizById,
+} from "../controllers/quiz.controller";
 
-const router = Router();
+const quizRouter = Router();
 
-router.use(authenticate); // Toutes les routes suivantes sont protégées
+quizRouter.post("/create", authMiddleware, createQuiz);
+quizRouter.get("/getAll", authMiddleware, getAllQuiz);
+quizRouter.get("/:id", authMiddleware, getQuizById);
 
-router.post("/", createQuiz);
-router.get("/", getMyQuizzes);
-router.get("/getAll",authenticate,getAllQuizzes)
-router.get("/:id", getQuizById);
-
-export default router;
+export { quizRouter };

@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../src/generated/prisma"
@@ -13,6 +7,7 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
 model Quiz {
   id        Int        @id @default(autoincrement())
   title     String
@@ -20,78 +15,78 @@ model Quiz {
   userId    Int
   user      User       @relation(fields: [userId], references: [id])
   questions Question[]
-  games     Game[]     // Relation opposée ajoutée
+  games     Game[]
 }
 
 model User {
-  id        Int          @id @default(autoincrement())
-  email     String       @unique
-  password  String
-  username  String       @unique
-  createdAt DateTime     @default(now())
-  quizzes   Quiz[]
-  gamePlayers GamePlayer[] // Relation opposée ajoutée
+  id             Int           @id @default(autoincrement())
+  email          String        @unique
+  password       String
+  username       String        @unique
+  createdAt      DateTime      @default(now())
+  profilePicture String
+  numberOfGames  Int
+  quizzes        Quiz[]
+  gamePlayers    GamePlayer[]
+  answers        Answer[]
 }
 
 model Question {
-  id           Int        @id @default(autoincrement())
-  quiz         Quiz       @relation(fields: [quizId], references: [id])
-  quizId       Int
-  question     String
+  id           Int           @id @default(autoincrement())
+  title        String
   options      String[]
   correctIndex Int
-  answers      Answer[]   // Relation opposée ajoutée
-  gamesAsCurrentQuestion Game[] @relation("CurrentQuestion")
+  quizId       Int
+  quiz         Quiz          @relation(fields: [quizId], references: [id])
   gameQuestions GameQuestion[]
 }
 
 model Game {
-  id              Int            @id @default(autoincrement())
-  quizId          Int
-  quiz            Quiz           @relation(fields: [quizId], references: [id])
-  players         GamePlayer[]
-  answers         Answer[]
-  createdAt       DateTime       @default(now())
-  startedAt       DateTime?      
-  endedAt         DateTime?      
-  currentTurn     Int            @default(1)
-  turnStartedAt   DateTime?
-  maxQuestions    Int            @default(10)
-  currentQuestionId Int?         @unique
-  currentQuestion Question? @relation("CurrentQuestion", fields: [currentQuestionId], references: [id])
-  gameQuestions GameQuestion[]
+  id             Int           @id @default(autoincrement())
+  quizId         Int
+  quiz           Quiz          @relation(fields: [quizId], references: [id])
+  createdAt      DateTime      @default(now())
+  state          GameState
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  round          Int           @default(0)
+  gameQuestions  GameQuestion[]
+  gamePlayers    GamePlayer[]
+}
+
+enum GameState {
+  WAITING
+  STARTED
+  FINISHED
 }
 
 model GamePlayer {
-  id        Int          @id @default(autoincrement())
-  user      User         @relation(fields: [userId], references: [id])
+  id        Int      @id @default(autoincrement())
   userId    Int
-  game      Game         @relation(fields: [gameId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
   gameId    Int
-  score     Int
-  joinedAt  DateTime     @default(now())
-  answers   Answer[]
-}
+  game      Game     @relation(fields: [gameId], references: [id])
+  score     Int      @default(0)
+  joinedAt  DateTime @default(now())
 
-model Answer {
-  id            Int        @id @default(autoincrement())
-  question      Question   @relation(fields: [questionId], references: [id])
-  questionId    Int
-  gamePlayer    GamePlayer @relation(fields: [gamePlayerId], references: [id])
-  gamePlayerId  Int
-  selectedIndex Int
-  isCorrect     Boolean
-  answeredAt    DateTime   @default(now())
-  
-  game          Game       @relation(fields: [gameId], references: [id])
-  gameId        Int
+  @@unique([userId, gameId], name: "gameId_userId")
 }
 
 model GameQuestion {
-  id        Int      @id @default(autoincrement())
-  game      Game     @relation(fields: [gameId], references: [id])
-  gameId    Int
-  question  Question @relation(fields: [questionId], references: [id])
-  questionId Int
-  order     Int
+  id          Int       @id @default(autoincrement())
+  gameId      Int
+  game        Game      @relation(fields: [gameId], references: [id])
+  questionId  Int
+  question    Question  @relation(fields: [questionId], references: [id])
+  round       Int
+  answers     Answer[]
+}
+
+model Answer {
+  id              Int           @id @default(autoincrement())
+  gameQuestionId  Int
+  gameQuestion    GameQuestion  @relation(fields: [gameQuestionId], references: [id])
+  userId          Int
+  user            User          @relation(fields: [userId], references: [id])
+  index           Int          
 }

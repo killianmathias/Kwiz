@@ -1,28 +1,35 @@
-import { useAuth } from '@/context/AuthContext';
-import { API_BASE_URL } from '@env';
-import axios from 'axios';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Dimensions, FlatList, StyleSheet, Text, TouchableOpacity } from 'react-native';
-const { width, height } = Dimensions.get('window');
+import { useAuth } from "@/context/AuthContext";
+import api from "../../lib/api"; // ⬅️ ton instance axios
+import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+} from "react-native";
+
+const { width, height } = Dimensions.get("window");
+
 const QuizList = () => {
-  const { token } = useAuth(); // récupère le token depuis le contexte
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const router = useRouter();
-  console.log(token);
+  const auth = useAuth();
 
   const fetchQuizzes = async () => {
-    try { // ⚠️ adapte en fonction de la structure réelle
-      const response = await axios.get(`${API_BASE_URL}/api/quizzes/getAll`, {
+    try {
+      const response = await api.get("/quiz/getAll", {
         headers: {
-          Authorization: `Bearer ${token}`, // 🔐 Auth header
+          Authorization: `Bearer ${auth.token}`,
         },
       });
       setQuizzes(response.data);
     } catch (err) {
-      console.error('Erreur API:', err);
+      console.error("Erreur API:", err);
       setError("Erreur lors du chargement des quiz");
     } finally {
       setLoading(false);
@@ -34,7 +41,8 @@ const QuizList = () => {
   }, []);
 
   if (loading) return <ActivityIndicator style={{ marginTop: 50 }} />;
-  if (error) return <Text style={{ marginTop: 50, color: 'red' }}>{error}</Text>;
+  if (error)
+    return <Text style={{ marginTop: 50, color: "red" }}>{error}</Text>;
 
   return (
     <FlatList
@@ -42,8 +50,9 @@ const QuizList = () => {
       keyExtractor={(item) => item.id.toString()}
       contentContainerStyle={styles.listContainer}
       renderItem={({ item }) => (
-        <TouchableOpacity style={styles.card}
-          onPress={() => router.push(`../quiz/${item.id}`)} // 👈 navigation dynamique
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => router.push(`../quiz/${item.id}`)}
         >
           <Text style={styles.title}>{item.title}</Text>
           <Text style={styles.description}>{item.description}</Text>
@@ -62,20 +71,20 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
-    marginHorizontal:10,
-    height:0.15 * height,
-    width : 0.3 * width
+    marginHorizontal: 10,
+    height: 0.15 * height,
+    width: 0.3 * width,
   },
   title: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   description: {
-    color: '#555',
+    color: "#555",
     marginTop: 4,
   },
 });

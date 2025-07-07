@@ -1,24 +1,23 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { AuthRequest } from "../../types/express";
 
-const SECRET = process.env.JWT_SECRET || "secretdev";
-
-interface AuthRequest extends Request {
-  userId?: number;
-}
-
-export const authenticate = (req: AuthRequest, res: Response, next: NextFunction) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ message: "Token manquant" });
-
-  const token = authHeader.split(" ")[1];
-
+export const authMiddleware = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-    const payload = jwt.verify(token, SECRET) as { userId: number };
-    req.userId = payload.userId;
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) return res.status(401).json({ error: "Token manquant" });
+
+    const decodedToken = jwt.verify(token, "RANDOM_TOKEN_SECRET") as {
+      userId: string;
+    };
+    req.auth = { userId: decodedToken.userId };
+
     next();
   } catch (error) {
-    return res.status(401).json({ message: "Token invalide" });
+    res.status(401).json({ error });
   }
 };
-export type { AuthRequest };

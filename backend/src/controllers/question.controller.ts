@@ -1,47 +1,41 @@
-// src/controllers/question.controller.ts
-import { Request, Response } from "express";
-import { prisma } from "../lib/prisma";
+import { Express, Request, Response, NextFunction } from "express";
+import { PrismaClient } from "../generated/prisma";
+import { AuthRequest } from "../../types/express";
+const prisma = new PrismaClient();
 
-export const addQuestion = async (req: Request, res: Response) => {
-  const quizId = parseInt(req.params.quizId);
-  const { question, options, correctIndex } = req.body;
-
-  if (!Array.isArray(options) || options.length < 2) {
-    return res.status(400).json({ message: "Il faut au moins deux options" });
+export const createQuestion = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  if (!req.auth) {
+    return res.status(401).json({ error: "Utilisateur non authentifié" });
   }
+  const { title, options, correctIndex, quizId } = req.body;
+  const userId = parseInt(req.auth.userId);
 
-  if (correctIndex < 0 || correctIndex >= options.length) {
-    return res.status(400).json({ message: "L'index de la bonne réponse est invalide" });
+  const user = await prisma.quiz.findUnique({
+    where: {
+      id: quizId,
+    },
+  });
+  if (user?.userId != userId) {
+    return res.status(401).json({
+      message:
+        "Vous ne pouvez pas créer de question pour ce quiz car vous n'avez pas les autorisations nécessaires.",
+    });
   }
-
   try {
-    const created = await prisma.question.create({
+    const question = await prisma.question.create({
       data: {
-        quizId,
-        question,
-        options,
-        correctIndex,
+        title: title,
+        options: options,
+        correctIndex: correctIndex,
+        quizId: quizId,
       },
     });
-
-    res.status(201).json(created);
+    res.status(200).json({ message: "Question ajoutée avec succès au quiz!" });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Erreur lors de la création de la question" });
-  }
-};
-
-export const getQuestions = async (req: Request, res: Response) => {
-  const quizId = parseInt(req.params.quizId);
-
-  try {
-    const questions = await prisma.question.findMany({
-      where: { quizId },
-    });
-
-    res.json(questions);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Erreur lors de la récupération des questions" });
+    res.status(400).json(error);
   }
 };

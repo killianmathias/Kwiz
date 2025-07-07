@@ -1,18 +1,26 @@
-import { ThemedText } from '@/components/ThemedText';
-import { useAuth } from '@/context/AuthContext';
-import { API_BASE_URL } from '@env';
-import axios from 'axios';
-import { useLocalSearchParams, useNavigation } from 'expo-router';
-import { useEffect, useLayoutEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Button, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ThemedText } from "@/components/ThemedText";
+import { useAuth } from "@/context/AuthContext";
+import axios from "axios";
+import { useLocalSearchParams, useNavigation } from "expo-router";
+import { useEffect, useLayoutEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  View,
+  Image,
+  Button,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function QuizDetail() {
   const { quizId } = useLocalSearchParams();
   const navigation = useNavigation();
   const [quiz, setQuiz] = useState<any>(null);
+  const [quizUser, setQuizUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const { token } = useAuth();
+  const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 
   useLayoutEffect(() => {
     navigation.setOptions({ headerShown: false });
@@ -21,67 +29,51 @@ export default function QuizDetail() {
   useEffect(() => {
     const fetchQuiz = async () => {
       try {
-        const res = await axios.get(`${API_BASE_URL}/api/quizzes/${quizId}`, {
+        const res = await axios.get(`${API_BASE_URL}/quiz/${quizId}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
-        setQuiz(res.data);
+        setQuiz(res.data.quiz);
       } catch (error) {
-        console.error('Erreur lors de la récupération du quiz :', error);
-      } finally {
-        setLoading(false);
+        console.error("Erreur lors de la récupération du quiz :", error);
       }
     };
 
     if (quizId && token) fetchQuiz();
   }, [quizId, token]);
 
-const handleStartGame = async () => {
-  try {
-    // 1. Essayer de récupérer une partie existante en waiting pour ce quiz
-    let game = null;
-    try {
-      const availableRes = await axios.get(
-        `${API_BASE_URL}/api/games/available/${quizId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      game = availableRes.data;
-    } catch (error) {
-      // 404 => pas de partie dispo, on crée la partie ensuite
-      if (axios.isAxiosError(error) && error.response?.status !== 404) {
-        throw error; // autre erreur => on stop
+  useEffect(() => {
+    const fetchQuizCreator = async () => {
+      if (!quiz) return;
+
+      try {
+        const userId = quiz.userId;
+        const userRes = await axios.post(
+          `${API_BASE_URL}/auth/getUser/${userId}`,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        setQuizUser(userRes.data);
+      } catch (error) {
+        console.error(
+          "Erreur lors de la récupération du créateur du quiz :",
+          error
+        );
+      } finally {
+        setLoading(false);
       }
-    }
+    };
 
-    // 2. Si aucune partie dispo, on crée une nouvelle partie
-    if (!game) {
-      const createRes = await axios.post(
-        `${API_BASE_URL}/api/games`,
-        { quizId: Number(quizId) },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      game = createRes.data;
-    }else{
-      await axios.post(
-        `${API_BASE_URL}/api/games/join`,
-        {gameId : Number(game.id)},
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
-    }
+    if (quiz && token) fetchQuizCreator();
+  }, [quiz, token]);
 
-    console.log("Partie trouvée ou créée :", game);
-    
-    // 3. Naviguer vers la salle d'attente avec l'id de la partie
-    navigation.navigate('waiting-room', { gameId: game.id });
-
-  } catch (error) {
-    console.error("Erreur lors de la tentative de rejoindre ou créer une partie :", error);
-    Alert.alert("Erreur", "Impossible de démarrer ou rejoindre la partie.");
-  }
-};
-
-  if (loading) {
+  if (loading || !quiz || !quizUser) {
     return (
       <SafeAreaView style={styles.container}>
         <ActivityIndicator size="large" color="#fff" />
@@ -89,29 +81,27 @@ const handleStartGame = async () => {
     );
   }
 
-  if (!quiz) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <Text style={styles.title}>Quiz introuvable</Text>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>{quiz.title}</Text>
-      <Text style={styles.subtitle}>Questions : {quiz.questions.length}</Text>
-      <ThemedText type='subtitle'>Créé par : {quiz.userId}</ThemedText>
-
-      <View style={{ marginTop: 20 }}>
-        <Button title="Jouer au quiz" onPress={handleStartGame} />
-      </View>
+      <Image
+        style={styles.image}
+        source={require("../../assets/images/pixar.png")}
+      />
+      <ThemedText type="title" style={styles.title}>
+        {quiz.title}
+      </ThemedText>
+      <Text style={styles.subtitle}>
+        Questions : {quiz.questions?.length || 0}
+      </Text>
+      <ThemedText type="subtitle">Créé par : {quizUser.username}</ThemedText>
+      <Button title="Jouer"></Button>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#121212' },
-  title: { fontSize: 24, fontWeight: 'bold', color: 'white' },
-  subtitle: { fontSize: 18, marginTop: 10, color: 'white' },
+  container: { flex: 1, backgroundColor: "#121212", alignItems: "center" },
+  title: { margin: 20 },
+  subtitle: { fontSize: 18, marginTop: 10, color: "white" },
+  image: { width: "100%", height: "40%", borderRadius: 24 },
 });

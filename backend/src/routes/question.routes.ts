@@ -1,9 +1,9 @@
-import { Router } from "express";
-import { addQuestion, getQuestions } from "../controllers/question.controller";
+import { Express, Router } from "express";
+import { authMiddleware } from "../middlewares/auth.middleware";
+import { createQuestion } from "../controllers/question.controller";
 
-const router = Router();
+const questionRouter = Router();
 
-router.post("/:quizId", addQuestion);        // Ajouter une question
-router.get("/:quizId", getQuestions);        // Obtenir les questions d’un quiz
+questionRouter.post("/create", authMiddleware, createQuestion);
 
-export default router;
+export { questionRouter };
